@@ -35,11 +35,11 @@ fi
 
 # 添加别名到 ~/.bashrc（防止重复添加）
 if ! grep -q 'alias tg=' ~/.bashrc; then
-  echo 'alias tg="$HOME/Downloads/tg"' >> ~/.bashrc && source ~/.bashrc
-  echo "✅ 已添加 alias：tg。已运行 'source ~/.bashrc' 生效。"
+  echo 'alias tg="$HOME/Downloads/tg"' >> ~/.bashrc
+  echo "✅ 已添加别名：tg。请手动运行 'source ~/.bashrc' 以使其生效。"
 else
-  echo "ℹ️ 已存在 alias：tg，跳过添加。"
+  echo "ℹ️ 别名 tg 已存在，跳过添加。"
 fi
 
 # 结束提示
-echo "🎉 安装完成！你可以使用命令：tg 启动 Telegram。"
+echo "🎉 安装完成！请执行 source ~/.bashrc 后使用 'tg' 启动 Telegram。"
