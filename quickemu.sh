@@ -14,8 +14,10 @@ if ! command -v remote-viewer &>/dev/null; then
   exit 1
 fi
 
-# 建立 spicy 软链接（放在 ~/Downloads/local 目录）
+# 建立下载目录
 mkdir -p ~/Downloads/local
+
+# 建立 spicy 软链接
 if [ ! -f ~/Downloads/local/spicy ]; then
   echo "🔗 创建 spicy 到 remote-viewer 的软链接 (~/Downloads/local/spicy)"
   ln -s "$(command -v remote-viewer)" ~/Downloads/local/spicy
@@ -31,5 +33,20 @@ cp /tmp/quickemu/quickget ~/Downloads/local/
 echo "🧹 清理临时文件"
 rm -rf /tmp/quickemu
 
-echo "✅ 下载完成！🎉"
-echo "👉 你现在可以运行：~/Downloads/local/quickget ubuntu-mate-24.04 && ~/Downloads/local/quickemu --vm ubuntu-mate-24.04.conf"
+# 设置环境变量（仅当前会话）
+export PATH="$HOME/Downloads/local:$PATH"
+
+# 永久添加到 .bashrc 或 .zshrc
+if [[ "$SHELL" == *zsh ]]; then
+  SHELL_RC="$HOME/.zshrc"
+else
+  SHELL_RC="$HOME/.bashrc"
+fi
+
+if ! grep -q 'Downloads/local' "$SHELL_RC"; then
+  echo "📌 将 ~/Downloads/local 添加到 PATH 中（写入 $SHELL_RC）"
+  echo 'export PATH="$HOME/Downloads/local:$PATH"' >> "$SHELL_RC"
+fi
+
+echo "✅ 安装完成！🎉"
+echo "👉 你现在可以直接运行：quickget ubuntu-mate-24.04 && quickemu --vm ubuntu-mate-24.04.conf"
