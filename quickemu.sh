@@ -1,5 +1,5 @@
 #!/bin/bash
-# 🚀 一键安装 quickemu 和 quickget 到 /usr/local/bin，并确保 spice viewer 正常工作
+# 🚀 下载 quickemu 和 quickget 到 ~/Downloads/local，并确保 spice viewer 正常工作
 
 echo "🔍 正在检测并安装依赖：qemu, zenity, xdg-utils..."
 sudo apt update
@@ -14,21 +14,22 @@ if ! command -v remote-viewer &>/dev/null; then
   exit 1
 fi
 
-# 建立 spicy 软链接
-if [ ! -f /usr/local/bin/spicy ]; then
-  echo "🔗 创建 spicy 到 remote-viewer 的软链接"
-  sudo ln -s "$(command -v remote-viewer)" /usr/local/bin/spicy
+# 建立 spicy 软链接（放在 ~/Downloads/local 目录）
+mkdir -p ~/Downloads/local
+if [ ! -f ~/Downloads/local/spicy ]; then
+  echo "🔗 创建 spicy 到 remote-viewer 的软链接 (~/Downloads/local/spicy)"
+  ln -s "$(command -v remote-viewer)" ~/Downloads/local/spicy
 fi
 
-echo "📥 克隆 quickemu 仓库..."
+echo "📥 克隆 quickemu 仓库到 /tmp/quickemu..."
 git clone https://github.com/quickemu-project/quickemu.git /tmp/quickemu
 
-echo "📦 安装 quickemu 和 quickget 到 /usr/local/bin"
-sudo install /tmp/quickemu/quickemu /usr/local/bin/
-sudo install /tmp/quickemu/quickget /usr/local/bin/
+echo "📦 拷贝 quickemu 和 quickget 到 ~/Downloads/local"
+cp /tmp/quickemu/quickemu ~/Downloads/local/
+cp /tmp/quickemu/quickget ~/Downloads/local/
 
 echo "🧹 清理临时文件"
 rm -rf /tmp/quickemu
 
-echo "✅ 安装完成！🎉"
-echo "👉 你现在可以运行：quickget ubuntu-mate-24.04 && quickemu --vm ubuntu-mate-24.04.conf"
+echo "✅ 下载完成！🎉"
+echo "👉 你现在可以运行：~/Downloads/local/quickget ubuntu-mate-24.04 && ~/Downloads/local/quickemu --vm ubuntu-mate-24.04.conf"
