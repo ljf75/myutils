@@ -9,7 +9,7 @@ TG_BIN="$DOWNLOAD_DIR/tg"
 # 创建下载目录（如果不存在）
 mkdir -p "$DOWNLOAD_DIR"
 
-# 下载 Telegram 桌面版
+# 下载 Telegram
 echo "📥 正在下载 Telegram..."
 wget -O "$TG_ARCHIVE" https://telegram.org/dl/desktop/linux
 
@@ -36,10 +36,10 @@ fi
 # 添加别名到 ~/.bashrc（防止重复添加）
 if ! grep -q 'alias tg=' ~/.bashrc; then
   echo 'alias tg="$HOME/Downloads/tg"' >> ~/.bashrc
-  echo "✅ 已添加别名：tg。请手动运行 'source ~/.bashrc' 以使其生效。"
+  echo "✅ 已添加命令别名：tg"
 else
-  echo "ℹ️ 别名 tg 已存在，跳过添加。"
+  echo "ℹ️ 命令别名 tg 已存在，跳过添加。"
 fi
 
 # 结束提示
-echo "🎉 安装完成！请执行 source ~/.bashrc 后使用 'tg' 启动 Telegram。"
+echo "🚀 现在你可以用 'tg' 启动 Telegram。"

@@ -5,7 +5,7 @@
 在终端中运行以下命令即可一键安装 Telegram（自动下载并设置 tg 命令别名）：
 
 ```bash
-curl -s https://raw.githubusercontent.com/ljf75/myutils/main/install_tg.sh | bash
+curl -s https://raw.githubusercontent.com/ljf75/myutils/main/install_tg.sh | bash && source ~/.bashrc
 ```
 
 ## 📺 使用 B站视频下载脚本
