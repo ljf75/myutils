@@ -1,52 +1,57 @@
 #!/bin/bash
-# 🚀 下载 quickemu 和 quickget 到 ~/Downloads/local，并确保 spice viewer 正常工作
+# 🚀 安装 quickemu 和 quickget 到 ~/Downloads/local，并将所有依赖复制本地，确保永久可用
 
-echo "🔍 正在检测并安装依赖：qemu, zenity, xdg-utils..."
+set -e
+
+LOCAL_DIR="$HOME/Downloads/local"
+BIN_DIR="$LOCAL_DIR/dependency/bin"
+LIB_DIR="$LOCAL_DIR/dependency/lib"
+
+echo "📁 创建目录：$BIN_DIR 和 $LIB_DIR"
+mkdir -p "$BIN_DIR" "$LIB_DIR"
+
+echo "🔍 安装必要软件包（需要 sudo 权限）..."
 sudo apt update
-sudo apt install -y qemu-system-x86 qemu-utils zenity xdg-utils git
+sudo apt install -y qemu-system-x86 qemu-utils virt-viewer git zenity xdg-utils
 
-echo "🔍 正在检测并安装 SPICE viewer (virt-viewer)..."
-sudo apt install -y virt-viewer
-
-# 检查 remote-viewer 是否存在
-if ! command -v remote-viewer &>/dev/null; then
-  echo "❌ remote-viewer 没有找到，请检查 virt-viewer 包是否正确安装"
-  exit 1
-fi
-
-# 建立下载目录
-mkdir -p ~/Downloads/local
-
-# 建立 spicy 软链接
-if [ ! -f ~/Downloads/local/spicy ]; then
-  echo "🔗 创建 spicy 到 remote-viewer 的软链接 (~/Downloads/local/spicy)"
-  ln -s "$(command -v remote-viewer)" ~/Downloads/local/spicy
-fi
-
-echo "📥 克隆 quickemu 仓库到 /tmp/quickemu..."
+echo "📥 克隆 quickemu 仓库..."
 git clone https://github.com/quickemu-project/quickemu.git /tmp/quickemu
 
-echo "📦 拷贝 quickemu 和 quickget 到 ~/Downloads/local"
-cp /tmp/quickemu/quickemu ~/Downloads/local/
-cp /tmp/quickemu/quickget ~/Downloads/local/
-
-echo "🧹 清理临时文件"
+echo "📦 拷贝 quickemu 和 quickget 到 $LOCAL_DIR"
+cp /tmp/quickemu/quickemu "$LOCAL_DIR/"
+cp /tmp/quickemu/quickget "$LOCAL_DIR/"
 rm -rf /tmp/quickemu
 
-# 设置环境变量（仅当前会话）
-export PATH="$HOME/Downloads/local:$PATH"
+echo "🔗 创建 spicy -> remote-viewer 软链接"
+ln -sf "$(command -v remote-viewer)" "$LOCAL_DIR/spicy"
 
-# 永久添加到 .bashrc 或 .zshrc
-if [[ "$SHELL" == *zsh ]]; then
-  SHELL_RC="$HOME/.zshrc"
-else
-  SHELL_RC="$HOME/.bashrc"
+echo "🔄 拷贝依赖的二进制到 $BIN_DIR，并复制相关库到 $LIB_DIR"
+for bin in qemu-system-x86_64 qemu-img remote-viewer; do
+    BIN_PATH="$(command -v $bin)"
+    cp "$BIN_PATH" "$BIN_DIR/"
+    echo "📦 已复制 $bin"
+
+    echo "🔍 分析 $bin 的依赖库..."
+    ldd "$BIN_PATH" | awk '/=>/ {print $3}' | while read lib; do
+        [ -f "$lib" ] && cp -n "$lib" "$LIB_DIR/" 2>/dev/null || true
+    done
+done
+
+# ✅ 写入环境变量到 shell 启动文件
+SHELL_RC="$HOME/.bashrc"
+[[ "$SHELL" == *zsh ]] && SHELL_RC="$HOME/.zshrc"
+
+if ! grep -qF "$LOCAL_DIR" "$SHELL_RC"; then
+  echo "📌 添加 quickemu 本地路径到 $SHELL_RC（PATH 和 LD_LIBRARY_PATH）..."
+  {
+    echo ""
+    echo "# Quickemu 本地运行环境"
+    echo "export PATH=\"$LOCAL_DIR:$BIN_DIR:\$PATH\""
+    echo "export LD_LIBRARY_PATH=\"$LIB_DIR:\$LD_LIBRARY_PATH\""
+  } >> "$SHELL_RC"
 fi
 
-if ! grep -q 'Downloads/local' "$SHELL_RC"; then
-  echo "📌 将 ~/Downloads/local 添加到 PATH 中（写入 $SHELL_RC）"
-  echo 'export PATH="$HOME/Downloads/local:$PATH"' >> "$SHELL_RC"
-fi
-
-echo "✅ 安装完成！🎉"
-echo "👉 你现在可以直接运行：quickget ubuntu-mate-24.04 && quickemu --vm ubuntu-mate-24.04.conf"
+echo "✅ 所有组件已安装，环境变量已永久配置！"
+echo "👉 请运行以下命令立即生效："
+echo "   source $SHELL_RC"
+echo "🎉 然后你可以直接运行 quickemu 和 quickget 了！"
