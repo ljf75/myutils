@@ -12,7 +12,7 @@ mkdir -p "$BIN_DIR" "$LIB_DIR"
 
 echo "🔍 安装必要软件包（需要 sudo 权限）..."
 sudo apt update
-sudo apt install -y qemu-system-x86 qemu-utils virt-viewer git zenity xdg-utils
+sudo apt install -y qemu-system-x86 qemu-utils virt-viewer spice-client-gtk git zenity xdg-utils
 
 echo "📥 克隆 quickemu 仓库..."
 git clone https://github.com/quickemu-project/quickemu.git /tmp/quickemu
@@ -22,19 +22,20 @@ cp /tmp/quickemu/quickemu "$LOCAL_DIR/"
 cp /tmp/quickemu/quickget "$LOCAL_DIR/"
 rm -rf /tmp/quickemu
 
-echo "🔗 创建 spicy -> remote-viewer 软链接"
-ln -sf "$(command -v remote-viewer)" "$LOCAL_DIR/spicy"
-
-echo "🔄 拷贝依赖的二进制到 $BIN_DIR，并复制相关库到 $LIB_DIR"
-for bin in qemu-system-x86_64 qemu-img remote-viewer; do
+echo "📥 拷贝依赖的二进制到 $BIN_DIR，并复制相关库到 $LIB_DIR"
+for bin in qemu-system-x86_64 qemu-img remote-viewer spicy; do
     BIN_PATH="$(command -v $bin)"
-    cp "$BIN_PATH" "$BIN_DIR/"
-    echo "📦 已复制 $bin"
+    if [ -x "$BIN_PATH" ]; then
+        cp "$BIN_PATH" "$BIN_DIR/"
+        echo "📦 已复制 $bin"
 
-    echo "🔍 分析 $bin 的依赖库..."
-    ldd "$BIN_PATH" | awk '/=>/ {print $3}' | while read lib; do
-        [ -f "$lib" ] && cp -n "$lib" "$LIB_DIR/" 2>/dev/null || true
-    done
+        echo "🔍 分析 $bin 的依赖库..."
+        ldd "$BIN_PATH" | awk '/=>/ {print $3}' | while read lib; do
+            [ -f "$lib" ] && cp -n "$lib" "$LIB_DIR/" 2>/dev/null || true
+        done
+    else
+        echo "⚠️ 警告：未找到可执行文件 $bin，已跳过"
+    fi
 done
 
 # ✅ 写入环境变量到 shell 启动文件
