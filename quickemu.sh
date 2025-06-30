@@ -4,15 +4,16 @@
 set -e
 
 LOCAL_DIR="$HOME/Downloads/local"
-BIN_DIR="$LOCAL_DIR/dependency/bin"
-LIB_DIR="$LOCAL_DIR/dependency/lib"
+BIN_DIR="$LOCAL_DIR/deps/bin"
+LIB_DIR="$LOCAL_DIR/deps/lib"
+OVMF_DIR="$LOCAL_DIR/deps/ovmf"
 
-echo "📁 创建目录：$BIN_DIR 和 $LIB_DIR"
-mkdir -p "$BIN_DIR" "$LIB_DIR"
+echo "📁 创建目录：$BIN_DIR, $LIB_DIR 和 $OVMF_DIR"
+mkdir -p "$BIN_DIR" "$LIB_DIR" "$OVMF_DIR"
 
 echo "🔍 安装必要软件包（需要 sudo 权限）..."
 sudo apt update
-sudo apt install -y qemu-system-x86 qemu-utils virt-viewer spice-client-gtk git zenity xdg-utils
+sudo apt install -y qemu-system-x86 qemu-utils virt-viewer spice-client-gtk git zenity xdg-utils ovmf
 
 echo "📥 克隆 quickemu 仓库..."
 git clone https://github.com/quickemu-project/quickemu.git /tmp/quickemu
@@ -38,6 +39,17 @@ for bin in qemu-system-x86_64 qemu-img remote-viewer spicy; do
     fi
 done
 
+# ✅ 复制 OVMF 固件文件
+OVMF_FILE="/usr/share/ovmf/OVMF.fd"
+
+if [ -f "$OVMF_FILE" ]; then
+  echo "📦 复制 OVMF 固件文件到 $OVMF_DIR"
+  cp "$OVMF_FILE" "$OVMF_DIR/"
+else
+  echo "❌ 找不到 OVMF 固件文件，请安装 ovmf 或检查文件路径！"
+  exit 1
+fi
+
 # ✅ 写入环境变量到 shell 启动文件
 SHELL_RC="$HOME/.bashrc"
 [[ "$SHELL" == *zsh ]] && SHELL_RC="$HOME/.zshrc"
@@ -49,6 +61,7 @@ if ! grep -qF "$LOCAL_DIR" "$SHELL_RC"; then
     echo "# Quickemu 本地运行环境"
     echo "export PATH=\"$LOCAL_DIR:$BIN_DIR:\$PATH\""
     echo "export LD_LIBRARY_PATH=\"$LIB_DIR:\$LD_LIBRARY_PATH\""
+    echo "export OVMF_DIR=\"$OVMF_DIR\""
   } >> "$SHELL_RC"
 fi
 
