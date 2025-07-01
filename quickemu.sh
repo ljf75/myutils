@@ -1,71 +1,79 @@
 #!/bin/bash
-# 🚀 安装 quickemu 和 quickget 到 ~/Downloads/local，并将所有依赖复制本地，确保永久可用
+# 🚀 完整安装 quickemu 到 ~/Downloads/local，脱离系统运行环境
 
-set -e
+set -euo pipefail
 
 LOCAL_DIR="$HOME/Downloads/local"
 BIN_DIR="$LOCAL_DIR/deps/bin"
 LIB_DIR="$LOCAL_DIR/deps/lib"
-OVMF_DIR="$LOCAL_DIR/deps/ovmf"
+OVMF_DIR="$LOCAL_DIR/deps/OVMF"
+QUICKEMU_REPO="https://github.com/quickemu-project/quickemu.git"
+QUICKEMU_LOCAL="$LOCAL_DIR/quickemu"
+SHARE_REPLACE_DIR="$LOCAL_DIR/deps"
 
-echo "📁 创建目录：$BIN_DIR, $LIB_DIR 和 $OVMF_DIR"
+echo "📁 创建本地目录..."
 mkdir -p "$BIN_DIR" "$LIB_DIR" "$OVMF_DIR"
 
 echo "🔍 安装必要软件包（需要 sudo 权限）..."
 sudo apt update
-sudo apt install -y qemu-system-x86 qemu-utils virt-viewer spice-client-gtk git zenity xdg-utils ovmf
+sudo apt install -y qemu-system-x86 qemu-utils virt-viewer spice-client-gtk zenity xdg-utils ovmf
 
 echo "📥 克隆 quickemu 仓库..."
-git clone https://github.com/quickemu-project/quickemu.git /tmp/quickemu
+rm -rf /tmp/quickemu
+git clone --depth=1 "$QUICKEMU_REPO" /tmp/quickemu
 
 echo "📦 拷贝 quickemu 和 quickget 到 $LOCAL_DIR"
-cp /tmp/quickemu/quickemu "$LOCAL_DIR/"
-cp /tmp/quickemu/quickget "$LOCAL_DIR/"
-rm -rf /tmp/quickemu
+cp /tmp/quickemu/bin/quickemu "$QUICKEMU_LOCAL"
+cp /tmp/quickemu/bin/quickget "$LOCAL_DIR/quickget"
 
-echo "📥 拷贝依赖的二进制到 $BIN_DIR，并复制相关库到 $LIB_DIR"
+echo "🛠 修改 quickemu 脚本中默认 /usr/share 路径为 $SHARE_REPLACE_DIR"
+sed -i "s|/usr/share|$SHARE_REPLACE_DIR|g" "$QUICKEMU_LOCAL"
+
+echo "📥 拷贝依赖的 QEMU 可执行文件到 $BIN_DIR，并复制其动态链接库到 $LIB_DIR"
 for bin in qemu-system-x86_64 qemu-img remote-viewer spicy; do
-    BIN_PATH="$(command -v $bin)"
+    BIN_PATH="$(command -v $bin || true)"
     if [ -x "$BIN_PATH" ]; then
         cp "$BIN_PATH" "$BIN_DIR/"
-        echo "📦 已复制 $bin"
+        echo "✅ 已复制 $bin"
 
-        echo "🔍 分析 $bin 的依赖库..."
-        ldd "$BIN_PATH" | awk '/=>/ {print $3}' | while read lib; do
+        echo "🔍 复制 $bin 的依赖库..."
+        ldd "$BIN_PATH" | awk '/=>/ {print $3}' | while read -r lib; do
             [ -f "$lib" ] && cp -n "$lib" "$LIB_DIR/" 2>/dev/null || true
         done
     else
-        echo "⚠️ 警告：未找到可执行文件 $bin，已跳过"
+        echo "⚠️ 未找到可执行文件 $bin，跳过"
     fi
 done
 
-# ✅ 复制 OVMF 固件文件
-OVMF_FILE="/usr/share/ovmf/OVMF.fd"
-
-if [ -f "$OVMF_FILE" ]; then
-  echo "📦 复制 OVMF 固件文件到 $OVMF_DIR"
-  cp "$OVMF_FILE" "$OVMF_DIR/"
+echo "📦 复制整个 /usr/share/OVMF 到 $OVMF_DIR（如果不存在）"
+if [ ! -d "$OVMF_DIR" ]; then
+    cp -r /usr/share/OVMF "$LOCAL_DIR/deps/"
+    echo "✅ OVMF 固件已复制"
 else
-  echo "❌ 找不到 OVMF 固件文件，请安装 ovmf 或检查文件路径！"
-  exit 1
+    echo "✅ OVMF 目录已存在，跳过复制"
 fi
 
-# ✅ 写入环境变量到 shell 启动文件
+# ✅ 设置环境变量写入 shell 启动脚本
 SHELL_RC="$HOME/.bashrc"
 [[ "$SHELL" == *zsh ]] && SHELL_RC="$HOME/.zshrc"
 
 if ! grep -qF "$LOCAL_DIR" "$SHELL_RC"; then
-  echo "📌 添加 quickemu 本地路径到 $SHELL_RC（PATH 和 LD_LIBRARY_PATH）..."
-  {
-    echo ""
-    echo "# Quickemu 本地运行环境"
-    echo "export PATH=\"$LOCAL_DIR:$BIN_DIR:\$PATH\""
-    echo "export LD_LIBRARY_PATH=\"$LIB_DIR:\$LD_LIBRARY_PATH\""
-    echo "export OVMF_DIR=\"$OVMF_DIR\""
-  } >> "$SHELL_RC"
+    echo "📌 写入环境变量到 $SHELL_RC"
+    {
+        echo ""
+        echo "# Quickemu 本地运行环境"
+        echo "export PATH=\"$LOCAL_DIR:$BIN_DIR:\$PATH\""
+        echo "export LD_LIBRARY_PATH=\"$LIB_DIR:\$LD_LIBRARY_PATH\""
+        echo "export OVMF_DIR=\"$OVMF_DIR\""
+        echo "export QUICKEMU_DIR=\"$SHARE_REPLACE_DIR\""
+    } >> "$SHELL_RC"
+else
+    echo "✅ 环境变量已存在于 $SHELL_RC，跳过写入"
 fi
 
-echo "✅ 所有组件已安装，环境变量已永久配置！"
-echo "👉 请运行以下命令立即生效："
-echo "   source $SHELL_RC"
-echo "🎉 然后你可以直接运行 quickemu 和 quickget 了！"
+echo ""
+echo "✅ 安装完成！你可以运行以下命令立即生效环境变量："
+echo "   source \"$SHELL_RC\""
+echo ""
+echo "🎉 现在你可以运行 quickemu:"
+echo "   $QUICKEMU_LOCAL --vm your-vm.conf"
