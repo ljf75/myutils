@@ -29,3 +29,4 @@ install_ytdlp() {
 
 # 检查是否安装了 yt-dlp，如果没有则安装
 command -v yt-dlp >/dev/null 2>&1 || install_ytdlp
+grep -q 'alias yt=' ~/.bashrc || echo 'alias yt="yt-dlp -f \"bv*+ba/best\" --merge-output-format mp4"' >> ~/.bashrc
