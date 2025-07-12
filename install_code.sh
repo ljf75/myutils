@@ -49,5 +49,7 @@ EOF
 chmod +x "$DESKTOP_FILE"
 update-desktop-database ~/.local/share/applications/
 
+rm $TARBALL
+
 # 完成
 echo "✅ VSCode 安装完成！你可以在应用菜单中搜索“Visual Studio Code”运行。"
